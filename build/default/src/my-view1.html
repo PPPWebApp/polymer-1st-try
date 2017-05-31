@@ -7,6 +7,8 @@ The complete set of contributors may be found at http://polymer.github.io/CONTRI
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 --><link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="shared-styles.html">
 
 <dom-module id="my-view1">
@@ -17,19 +19,106 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         padding: 10px;
       }
+
+      div.row {
+        display: table;
+        width: 100%;
+      }
+      
+      div.row div.col-md-4,
+      div.row div.col-sm-6 {
+        box-sizing: border-box;
+        float: left;
+        width: 33.333333332%;
+        padding: 15px;
+      }
+
+      @media (max-width: 991px) {
+        div.row div.col-sm-6 {
+          width: 50%;
+        }
+      }
+
+      @media (max-width: 639px) {
+        div.row div.col-md-4,
+        div.row div.col-sm-6 {
+          width: 100%;
+        }
+      }
+
+      div.card {
+        margin: 0;
+      }
+
+      /* Paper Button */
+      paper-button.green {
+        margin: 0;
+        background: white;
+        color: var(--paper-green-500);
+      }
+
+      paper-button.green[active] {
+        background-color: var(--paper-red-500);
+      }
     </style>
 
-    <div class="card">
-      <div class="circle">1</div>
-      <h1>View One</h1>
-      <p>Ut labores minimum atomorum pro. Laudem tibique ut has.</p>
-      <p>Lorem ipsum dolor sit amet, per in nusquam nominavi periculis, sit elit oportere ea.Lorem ipsum dolor sit amet, per in nusquam nominavi periculis, sit elit oportere ea.Cu mei vide viris gloriatur, at populo eripuit sit.</p>
+    <h1>Open Jobs</h1>
+
+    <iron-ajax auto="" url="https://polymer-1st-try.firebaseio.com/jobs.json" handle-as="json" last-response="{{ajaxResponse}}" debounce-duration="300"></iron-ajax>
+    
+    <div class="row">
+      <template is="dom-repeat" items="{{toArray(ajaxResponse)}}">
+        <div class="col-md-4 col-sm-6">
+          <div class="card">
+            <div class="circle">[[item.value.priority]]</div>
+
+            <h1>[[item.value.title]]</h1>
+
+            <p>[[item.value.description]]</p>
+
+            <p>
+              <b>Asset:</b> [[item.value.asset]]
+            </p>
+
+            <p>
+              <b>Location:</b> [[item.value.location]]
+            </p>
+
+            <p>
+              <b>Status:</b> 
+              <span style="{{getStyle(item.value.status)}}">[[item.value.status]]</span>
+            </p>
+
+            <paper-button raised="" class="green">START</paper-button>
+          </div>
+        </div>
+      </template>
     </div>
   </template>
 
   <script>
     class MyView1 extends Polymer.Element {
       static get is() { return 'my-view1'; }
+
+      handleResponse(e) {
+        console.log("on response");
+      }
+
+      // Convert Firebase data object to an array
+      toArray(obj) {
+        var finalArray = Object.keys(obj).map(function(key) {
+            return {
+                name: key,
+                value: obj[key]
+            };
+        });
+
+        return finalArray;
+      }
+
+      getStyle(status) {
+        return status === 'approved' ? 'color: green;' : '';
+      }
     }
 
     window.customElements.define(MyView1.is, MyView1);
