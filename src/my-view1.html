@@ -11,6 +11,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/app-storage/app-indexeddb-mirror/app-indexeddb-mirror.html">
 <link rel="import" href="shared-styles.html">
 
 <dom-module id="my-view1">
@@ -82,8 +83,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     last-response="{{ajaxResponse}}"
     debounce-duration="300"></iron-ajax>
     
+    <app-indexeddb-mirror
+        key="jobs"
+        data="{{ajaxResponse}}"
+        persisted-data="{{persistedData}}">
+    </app-indexeddb-mirror>
+
     <div class="row">
-      <template is="dom-repeat" items="{{toArray(ajaxResponse)}}">
+      <template is="dom-repeat" items="{{toArray(persistedData)}}">
         <div class="col-md-4 col-sm-6">
           <div class="card">
             Priority: <div class="circle">[[item.value.priority]]</div>
