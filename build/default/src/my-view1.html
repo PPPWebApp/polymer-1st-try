@@ -9,6 +9,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 --><link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/app-storage/app-indexeddb-mirror/app-indexeddb-mirror.html">
 <link rel="import" href="shared-styles.html">
 
 <dom-module id="my-view1">
@@ -20,6 +21,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         padding: 10px;
       }
 
+      /* Responsive Grid */
       div.row {
         display: table;
         width: 100%;
@@ -60,17 +62,28 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       paper-button.green[active] {
         background-color: var(--paper-red-500);
       }
+
+      /* Card Styles */
+      .circle {
+          width: 25px;
+          height: 25px;
+          font-size: 15px;
+          line-height: 25px;
+      }
     </style>
 
     <h1>Open Jobs</h1>
 
     <iron-ajax auto="" url="https://polymer-1st-try.firebaseio.com/jobs.json" handle-as="json" last-response="{{ajaxResponse}}" debounce-duration="300"></iron-ajax>
     
+    <app-indexeddb-mirror key="jobs" data="{{ajaxResponse}}" persisted-data="{{persistedData}}">
+    </app-indexeddb-mirror>
+
     <div class="row">
-      <template is="dom-repeat" items="{{toArray(ajaxResponse)}}">
+      <template is="dom-repeat" items="{{toArray(persistedData)}}">
         <div class="col-md-4 col-sm-6">
           <div class="card">
-            <div class="circle">[[item.value.priority]]</div>
+            Priority: <div class="circle">[[item.value.priority]]</div>
 
             <h1>[[item.value.title]]</h1>
 
@@ -86,7 +99,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             <p>
               <b>Status:</b> 
-              <span style="{{getStyle(item.value.status)}}">[[item.value.status]]</span>
+              <span>[[item.value.status]]</span>
             </p>
 
             <paper-button raised="" class="green">START</paper-button>
@@ -113,7 +126,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             };
         });
 
-        return finalArray;
+        return finalArray.sort(function (a, b) {
+          return a.value.priority - b.value.priority;
+        });;
       }
 
       getStyle(status) {
