@@ -118,14 +118,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <iron-ajax
     id="updateStatus"
-    url="https://polymer-1st-try.firebaseio.com/jobs/034jf0943f30j/.json"
     method="PATCH"
     handle-as="json"
     last-response="{{quote}}"></iron-ajax>
     <!-- FIREBASE Requests - END -->
-    
-    {{quote}}
-    
+        
     <app-indexeddb-mirror
         key="jobs"
         data="{{toArray(ajaxResponse)}}"
@@ -133,7 +130,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </app-indexeddb-mirror>
 
     <div class="row">
-      <template is="dom-repeat" items="{{jobsData}}" indexAs="i">
+      <template is="dom-repeat" items="{{jobsData}}">
         <div class="col-md-4 col-sm-6">
           <div class="card">
             <template is="dom-if" if="{{item.stopClicked}}">
@@ -151,7 +148,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 </div>
               </div>
             </template>
-            
+                        
             Priority: <div class="circle">[[item.value.priority]]</div>
 
             <h1>[[item.value.title]]</h1>
@@ -171,13 +168,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               <span>{{item.value.status}}</span>
             </p>
 
-            <template is="dom-if" if="{{!item.inProgress}}">
+            <template is="dom-if" if="{{!item.value.inProgress}}">
               <paper-button raised class="green" on-click="start">
                 START
               </paper-button>
             </template>
 
-            <template is="dom-if" if="{{item.inProgress}}">
+            <template is="dom-if" if="{{item.value.inProgress}}">
               <paper-button raised class="red" on-click="stop">
                 STOP
               </paper-button>
@@ -189,12 +186,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           </div>
         </div>
       </template>
-
-      {{jobsData}}
-
-      {{jobsData.0.value.status}}
-
-      {{open}}
     </div>
   </template>
 
@@ -239,15 +230,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return status === 'approved' ? 'color: green;' : '';
       }
 
-      start(e) {
-        e.preventDefault();
-        
-        console.log("You clicked START");
-
-        this.open = true;
-        this.set('jobsData.0.value.status', "in-progress");
-        this.set('jobsData.0.inProgress', true);
-        console.log(this.jobsData);
+      updateStatus(index, name, status) {
+        this.set('jobsData.' + index + '.value.status',     "in-progress");
+        this.set('jobsData.' + index + '.value.inProgress', true);
 
         // We have to bind the template with the model
         var ajaxRequest = this.$.updateStatus;
@@ -260,8 +245,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         //   ajaxRequest.generateRequest();
         // }
 
+        ajaxRequest.url = "https://polymer-1st-try.firebaseio.com/jobs/" + name + "/.json";
+
         ajaxRequest.body = JSON.stringify({
-          "status": "in-progress"
+          "status":     "in-progress",
+          "inProgress": true
         });
 
         ajaxRequest.generateRequest();
@@ -272,15 +260,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         }
       }
 
+      start(e) {
+        var index = e.model.index;
+        e.preventDefault();
+        
+        console.log("You clicked START", index);
+
+        this.updateStatus(index, e.model.item.name, "in-progress");
+
+        console.log(this.jobsData);
+      }
+
       stop(e) {
+        var index = e.model.index;
         e.preventDefault();
         
         console.log("You clicked STOP");
 
-        this.set('jobsData.0.value.status', "stopped");
-        this.set('jobsData.0.inProgress', false);
-        this.set('jobsData.0.stopClicked', true);
-        console.log(this.jobsData);
+        this.set('jobsData.' + index + '.stopClicked', true);
       }
     }
 
