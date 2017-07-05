@@ -49,7 +49,28 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       div.card {
+        position: relative;
         margin: 0;
+      }
+
+      div.card div.overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        background: rgba(256, 256, 256, 0.95);
+        z-index: 1;
+      }
+
+      div.card div.overlay div.overlay-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        text-align: center;
       }
 
       /* Paper Button */
@@ -60,6 +81,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       paper-button.green[active] {
+        background-color: var(--paper-green-500);
+      }
+
+      paper-button.red {
+        margin: 0;
+        background: white;
+        color: var(--paper-red-500);
+      }
+
+      paper-button.red[active] {
         background-color: var(--paper-red-500);
       }
 
@@ -74,15 +105,35 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <h1>Open Jobs</h1>
 
-    <iron-ajax auto="" url="https://polymer-1st-try.firebaseio.com/jobs.json" handle-as="json" last-response="{{ajaxResponse}}" debounce-duration="300"></iron-ajax>
-    
-    <app-indexeddb-mirror key="jobs" data="{{ajaxResponse}}" persisted-data="{{persistedData}}">
+    <!-- FIREBASE Requests -->
+    <iron-ajax auto="" url="https://polymer-1st-try.firebaseio.com/jobs.json" handle-as="json" on-response="handleResponse" last-response="{{ajaxResponse}}" debounce-duration="300"></iron-ajax>
+
+    <iron-ajax id="updateStatus" method="PATCH" handle-as="json" last-response="{{quote}}"></iron-ajax>
+    <!-- FIREBASE Requests - END -->
+        
+    <app-indexeddb-mirror key="jobs" data="{{toArray(ajaxResponse)}}" persisted-data="{{persistedData}}">
     </app-indexeddb-mirror>
 
     <div class="row">
-      <template is="dom-repeat" items="{{toArray(persistedData)}}">
+      <template is="dom-repeat" items="{{jobsData}}">
         <div class="col-md-4 col-sm-6">
           <div class="card">
+            <template is="dom-if" if="{{item.stopClicked}}">
+              <div class="overlay">
+                <div class="overlay-content">
+                  <p>Change the work order status to complete?</p>
+
+                  <paper-button raised="" on-click="stopOnly">
+                    No, stop only
+                  </paper-button>
+
+                  <paper-button raised="" class="green" on-click="completeJob">
+                    Yes
+                  </paper-button>
+                </div>
+              </div>
+            </template>
+                        
             Priority: <div class="circle">[[item.value.priority]]</div>
 
             <h1>[[item.value.title]]</h1>
@@ -99,10 +150,26 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             <p>
               <b>Status:</b> 
-              <span>[[item.value.status]]</span>
+              <span>{{item.value.status}}</span>
             </p>
 
-            <paper-button raised="" class="green">START</paper-button>
+            <template is="dom-if" if="{{!item.value.inProgress}}">
+              <template is="dom-if" if="{{!item.value.completed}}">
+                <paper-button raised="" class="green" on-click="start">
+                  START
+                </paper-button>
+              </template>
+            </template>
+
+            <template is="dom-if" if="{{item.value.inProgress}}">
+              <paper-button raised="" class="red" on-click="stop">
+                STOP
+              </paper-button>
+
+              <paper-button raised="" on-click="handleClick">
+                Report Actuals
+              </paper-button>
+            </template>
           </div>
         </div>
       </template>
@@ -113,12 +180,25 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     class MyView1 extends Polymer.Element {
       static get is() { return 'my-view1'; }
 
+      static get properties() {
+        return {
+          open: Boolean,
+          jobsData: {
+            notify: true
+          }
+        }
+      }
+
       handleResponse(e) {
-        console.log("on response");
+        console.log("on response", this.persistedData);
+
+        this.jobsData = this.persistedData;
       }
 
       // Convert Firebase data object to an array
       toArray(obj) {
+        console.log("toArray");
+
         var finalArray = Object.keys(obj).map(function(key) {
             return {
                 name: key,
@@ -126,13 +206,88 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             };
         });
 
-        return finalArray.sort(function (a, b) {
+        this.jobs = finalArray.sort(function (a, b) {
           return a.value.priority - b.value.priority;
-        });;
+        });
+
+        return this.jobs;
       }
 
       getStyle(status) {
         return status === 'approved' ? 'color: green;' : '';
+      }
+
+      updateStatus(index, name, status, completed) {
+        this.set('jobsData.' + index + '.value.status',       status);
+        this.set('jobsData.' + index + '.value.inProgress',   status === "in-progress");
+
+        // We have to bind the template with the model
+        var ajaxRequest = this.$.updateStatus;
+
+        // make the iron-ajax call
+        // this.postData = function() {
+        //   ajaxRequest.body = {
+        //     'text': t.dataToPost;
+        //   } 
+        //   ajaxRequest.generateRequest();
+        // }
+
+        ajaxRequest.url = "https://polymer-1st-try.firebaseio.com/jobs/" + name + "/.json";
+
+        ajaxRequest.body = JSON.stringify({
+          "status":       status,
+          "inProgress":   status === "in-progress",
+          "completed":    completed
+        });
+
+        ajaxRequest.generateRequest();
+
+        //callback on request complete
+        ajaxRequest.postComplete = function(){
+          alert('whoa! request complete');
+        }
+      }
+
+      start(e) {
+        var index = e.model.index;
+        e.preventDefault();
+        
+        console.log("You clicked START", index);
+
+        this.updateStatus(index, e.model.item.name, "in-progress");
+
+        console.log(this.jobsData);
+      }
+
+      stop(e) {
+        var index = e.model.index;
+        e.preventDefault();
+        
+        console.log("You clicked STOP");
+
+        this.set('jobsData.' + index + '.stopClicked', true);
+      }
+
+      stopOnly(e) {
+        var index = e.model.index;
+        e.preventDefault();
+        
+        console.log("You clicked STOPONLY");
+
+        this.updateStatus(index, e.model.item.name, "approved");
+
+        this.set('jobsData.' + index + '.stopClicked', false);
+      }
+
+      completeJob(e) {
+        var index = e.model.index;
+        e.preventDefault();
+        
+        console.log("You clicked COMPLETEJOB");
+
+        this.updateStatus(index, e.model.item.name, "completed", true);
+        
+        this.set('jobsData.' + index + '.stopClicked', false);
       }
     }
 
